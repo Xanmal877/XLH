@@ -1,0 +1,8 @@
+openai
+asyncio
+python-kasa
+PyNaCl
+pygame
+torch
+TTS
+SpeechRecognition
