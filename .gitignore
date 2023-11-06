@@ -152,5 +152,5 @@ cython_debug/
 #.idea/
 
 *Songs/
-*Wav_Files/
+*WavFiles/
 *Voices/
