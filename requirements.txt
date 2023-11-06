@@ -1,5 +1,4 @@
 openai
-asyncio
 python-kasa
 PyNaCl
 pygame
