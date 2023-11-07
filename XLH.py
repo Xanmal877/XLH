@@ -51,6 +51,7 @@ def process_openai_response(text):
     
     # Check if there's enough messages for a proper conversation
     if len(assistant_message_log) >= 2:
+        
         # Make an OpenAI API call
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -130,7 +131,7 @@ async def process_commands():
         await process_smart_home_command(command)
     else:
         # If the command is not related to websites or smart home, pass it to OpenAI's API
-        process_openai_response(command)
+        return
 
 # ======================[ MAIN PROCESSING LOOP ]============================ #
 
