@@ -5,3 +5,6 @@ pygame
 torch
 TTS
 SpeechRecognition
+PyQt5
+PyQt5-tools
+PyAudio
