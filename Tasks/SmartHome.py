@@ -4,7 +4,7 @@ from kasa import SmartBulb
 import asyncio
 
 # List of bulb IPs
-bulb_ips = ['192.168.1.45', '192.168.1.46']
+bulb_ips = ['192.168.1.6', '192.168.1.7']
 
 # A mapping of commands to actions
 SMART_HOME_ACTIONS = {

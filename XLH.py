@@ -3,6 +3,10 @@
 import speech_recognition as sr
 import torch
 from TTS.api import TTS
+import os
+import torchaudio
+from TTS.tts.configs.xtts_config import XttsConfig
+from TTS.tts.models.xtts import Xtts
 import openai
 import pygame.mixer
 from config import TamaKey
@@ -12,11 +16,20 @@ from Tasks.Websites import open_website, COMMAND_URLS
 
 # ======================[ GLOBAL VARIABLES AND CONSTANTS ]=================== #
 
+
+print("Loading model...")
+config = XttsConfig()
+config.load_json("Noelle\config.json")
+model = Xtts.init_from_config(config)
+model.load_checkpoint(config, checkpoint_dir="Noelle", use_deepspeed=False)
+model.cuda()
+
+print("Computing speaker latents...")
+gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["NoelleVocals.wav"])
+
 WAKE_WORDS = ["hey tama", "ok tama"]  # Define your wake words here
 
 # TTS and speech recognition setup
-device = "cuda" if torch.cuda.is_available() else "cpu"
-tts = TTS("tts_models/multilingual/multi-dataset/xtts_v1.1").to(device)
 recognizer = sr.Recognizer()
 pygame.mixer.init()
 openai.api_key = TamaKey
@@ -56,7 +69,7 @@ def process_openai_response(text):
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=assistant_message_log,
-            max_tokens=100,
+            max_tokens=50,
             temperature=0.7
         )
         
@@ -73,7 +86,15 @@ def process_openai_response(text):
         is_assistant_speaking = True
 
         # Speak the response
-        tts.tts_to_file(text=response_text, file_path="TamaResponse.wav", speaker_wav="Voices\\Noelle\\Noelle_1.wav", language="en")
+        print("Inference...")
+        out = model.inference(
+            response_text,
+            "en",
+            gpt_cond_latent,
+            speaker_embedding,
+            temperature=0.7, # Add custom parameters here
+        )
+        torchaudio.save("TamaResponse.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
         TamaResponse = pygame.mixer.Sound('TamaResponse.wav')
         TamaResponse.play()
 
@@ -100,6 +121,7 @@ async def listen_for_wake_word(recognizer, source):
 
 # ======================[ COMMAND PROCESSING ]============================== #
 
+# In the process_commands() function:
 async def process_commands():
     global is_assistant_speaking
 
@@ -122,16 +144,14 @@ async def process_commands():
         print(f"Could not request results; {e}")
         return
 
-    # After capturing the command, proceed to process it
-    # Check if the command relates to website operations
+    # Process the recognized command
     if any(keyword in command for keyword in COMMAND_URLS):
         await open_website(command)
-    # Check if the command relates to smart home control
     elif any(phrase in command for phrase in SMART_HOME_ACTIONS):
         await process_smart_home_command(command)
     else:
-        # If the command is not related to websites or smart home, pass it to OpenAI's API
-        return
+        process_openai_response(command)
+
 
 # ======================[ MAIN PROCESSING LOOP ]============================ #
 
