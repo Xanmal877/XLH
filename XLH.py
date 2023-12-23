@@ -3,43 +3,41 @@
 import os
 import keyboard
 import asyncio
-from config import TamaKey
 import pygame.mixer
 import openai
-import speech_recognition as sr
 import torch
 import torchaudio
-from Tasks.SmartHome import process_smart_home_command, SMART_HOME_ACTIONS
-from Tasks.Websites import open_website, COMMAND_URLS
+import speech_recognition as sr
+from config import OpenAIKey
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 from TTS.api import TTS
+from Tasks.SmartHome import process_smart_home_command, SMART_HOME_ACTIONS
+from Tasks.Websites import open_website, COMMAND_URLS
 
-# ======================[ GLOBAL VARIABLES AND CONSTANTS ]=================== #
+# ======================[ Loading model and Creating Global Variables ]=================== #
 
 
 print("Loading model...")
 config = XttsConfig()
-config.load_json("Noelle\config.json")
+config.load_json("Voices\\Noelle\\config.json")
 model = Xtts.init_from_config(config)
-model.load_checkpoint(config, checkpoint_dir="Noelle", use_deepspeed=False)
+model.load_checkpoint(config, checkpoint_dir="Voices\\Noelle", use_deepspeed=False)
 model.cuda()
 
 print("Computing speaker latents...")
-gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["NoelleVocals.wav"])
-
-WAKE_WORDS = ["hey tama", "ok tama"]  # Define your wake words here
+gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["Voices\\Noelle\\NoelleVocals.wav"])
 
 # TTS and speech recognition setup
 recognizer = sr.Recognizer()
 pygame.mixer.init()
-openai.api_key = TamaKey
 
-# Flags and logs
+
+# Flags and logs initialization
 is_assistant_speaking = False
-# Initialize a list to keep track of message logs
 assistant_message_log = []
 
+# Preparing initial system message for assistant log
 assistant_message_log.append({
     "role": "system",
     "content": (
@@ -51,14 +49,10 @@ assistant_message_log.append({
     )
 })
 
-
 # ======================[ UTILITY FUNCTIONS ]=============================== #
+openai.api_key = OpenAIKey
 
-def save_response_to_file(response_text):
-    with open("tama_responses.txt", "a") as file:
-        file.write(response_text + "\n")
-
-def process_openai_response(text):
+def ProcessResponse(text):
     global is_assistant_speaking
     # Append user message to the assistant's log
     assistant_message_log.append({"role": "user", "content": text})
@@ -78,8 +72,9 @@ def process_openai_response(text):
         response_text = completion.choices[0].message['content']
         
         # Save the response to a text file
-        save_response_to_file(response_text)
-        
+        with open("Responses.txt", "a") as file:
+            file.write(response_text + "\n")
+
         # Add the response to the log
         assistant_message_log.append({"role": "assistant", "content": response_text})
 
@@ -93,11 +88,11 @@ def process_openai_response(text):
             "en",
             gpt_cond_latent,
             speaker_embedding,
-            temperature=0.7, # Add custom parameters here
+            temperature=0.7,
         )
-        torchaudio.save("TamaResponse.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
-        TamaResponse = pygame.mixer.Sound('TamaResponse.wav')
-        TamaResponse.play()
+        torchaudio.save("Response.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
+        Response = pygame.mixer.Sound('Response.wav')
+        Response.play()
 
         # Wait for the TTS response to finish playing
         while pygame.mixer.get_busy():
@@ -106,80 +101,52 @@ def process_openai_response(text):
         # Set the flag to False as the assistant has finished speaking
         is_assistant_speaking = False
 
-# ======================[ WAKE WORD DETECTION ]============================= #
-
-async def listen_for_wake_word(recognizer, source):
-    print("Listening for wake word...")
-    audio = recognizer.listen(source)
-    try:
-        command = recognizer.recognize_google(audio).lower()
-        return any(wake_word in command for wake_word in WAKE_WORDS)
-    except sr.UnknownValueError:
-        return False
-    except sr.RequestError as e:
-        print(f"Could not request results; {e}")
-        return False
 
 # ======================[ COMMAND PROCESSING ]============================== #
 
-# In the process_commands() function:
+# Command processing and speech recognition as ProcessCommands
 async def ProcessCommands():
     global is_assistant_speaking
 
-    if is_assistant_speaking:
-        return  # Do nothing if the assistant is currently speaking
-
-    # Start by capturing a spoken command
-    with sr.Microphone() as source:
-        print("Listening for commands...")
-        audio = recognizer.listen(source)
-    
-    try:
-        # Attempt to recognize the command through speech
-        command = recognizer.recognize_google(audio).lower()
-
-    except sr.UnknownValueError:
-        print("Sorry, I didn't catch that.")
-        return
-    except sr.RequestError as e:
-        print(f"Could not request results; {e}")
-        return
-
-    # Process the recognized command
-    if any(keyword in command for keyword in COMMAND_URLS):
-        await open_website(command)
-    elif any(phrase in command for phrase in SMART_HOME_ACTIONS):
-        await process_smart_home_command(command)
-    else:
-        process_openai_response(command)
-
-
-# ======================[ MAIN PROCESSING LOOP ]============================ #
-
-async def listen_and_process_commands():
-    global is_assistant_speaking
-
+    commands_buffer = []  # To store accumulated commands while 'ctrl' is held down
+    print("I'm here! What can I do for you?")
     with sr.Microphone() as source:
         while True:  # Keep the program running
-            if await listen_for_wake_word(recognizer, source):
-                # Play a sound, speak a message, or print a message to acknowledge the wake word
-                print("I'm here! What can I do for you?")
-                # Optionally play a response sound or use TTS to audibly respond
+            if keyboard.is_pressed('ctrl'):
 
-                # Wait for a short moment before listening for a command
-                await asyncio.sleep(1)
+                while True:  # Continuously listen until 'ctrl' is released
+                    if not keyboard.is_pressed('ctrl'):  # Check if 'ctrl' is released
+                        break  # Exit the loop if 'ctrl' is released
 
-                # Now listen for an actual command
-                await ProcessCommands()
+                    if is_assistant_speaking:
+                        continue  # Skip if the assistant is currently speaking
+                    audio = recognizer.listen(source)
+                    
+                    try:
+                        command = recognizer.recognize_google(audio).lower()
+                        commands_buffer.append(command)  # Store commands in the buffer
+                    except sr.UnknownValueError:
+                        print("Sorry, I didn't catch that.")
+                    except sr.RequestError as e:
+                        print(f"Could not request results; {e}")
 
-# ======================[ MAIN ENTRY POINT ]================================ #
+                    await asyncio.sleep(0.1)  # Adjust sleep duration if needed
 
-# Main coroutine that starts the listening process
-async def main():
-    while True:
-        await ProcessCommands()
+                # 'ctrl' key released, process accumulated commands
+                if commands_buffer:
+                    for command in commands_buffer:
+                        if any(keyword in command for keyword in COMMAND_URLS):
+                            await open_website(command)
+                        elif any(phrase in command for phrase in SMART_HOME_ACTIONS):
+                            await process_smart_home_command(command)
+                        else:
+                            ProcessResponse(command)
+                    commands_buffer = []
+                    print("Command Processed")
 
-# Start the main loop
+# Main entry point
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(ProcessCommands())
+
+
 
