@@ -1,18 +1,19 @@
 # ======================[ IMPORTS AND INITIALIZATIONS ]====================== #
 
+import os
+import keyboard
+import asyncio
+from config import TamaKey
+import pygame.mixer
+import openai
 import speech_recognition as sr
 import torch
-from TTS.api import TTS
-import os
 import torchaudio
-from TTS.tts.configs.xtts_config import XttsConfig
-from TTS.tts.models.xtts import Xtts
-import openai
-import pygame.mixer
-from config import TamaKey
-import asyncio
 from Tasks.SmartHome import process_smart_home_command, SMART_HOME_ACTIONS
 from Tasks.Websites import open_website, COMMAND_URLS
+from TTS.tts.configs.xtts_config import XttsConfig
+from TTS.tts.models.xtts import Xtts
+from TTS.api import TTS
 
 # ======================[ GLOBAL VARIABLES AND CONSTANTS ]=================== #
 
@@ -122,7 +123,7 @@ async def listen_for_wake_word(recognizer, source):
 # ======================[ COMMAND PROCESSING ]============================== #
 
 # In the process_commands() function:
-async def process_commands():
+async def ProcessCommands():
     global is_assistant_speaking
 
     if is_assistant_speaking:
@@ -169,14 +170,14 @@ async def listen_and_process_commands():
                 await asyncio.sleep(1)
 
                 # Now listen for an actual command
-                await process_commands()
+                await ProcessCommands()
 
 # ======================[ MAIN ENTRY POINT ]================================ #
 
 # Main coroutine that starts the listening process
 async def main():
     while True:
-        await process_commands()
+        await ProcessCommands()
 
 # Start the main loop
 if __name__ == "__main__":
