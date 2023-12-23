@@ -95,7 +95,6 @@ def ProcessResponse(text):
         torchaudio.save("Response.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
         Response = pygame.mixer.Sound('Response.wav')
         Response.play()
-        del response_text
 
         # Wait for the TTS response to finish playing
         while pygame.mixer.get_busy():
@@ -108,53 +107,66 @@ def ProcessResponse(text):
 # ======================[ COMMAND PROCESSING ]============================== #
 
 
-
-# Command processing and speech recognition as ProcessCommands
 async def ProcessCommands():
     global is_assistant_speaking
 
-    commands_buffer = []  # To store accumulated commands while 'ctrl' is held down
+    commands_buffer = []  # To store accumulated commands while 'q' is held down
     print("I'm here! What can I do for you?")
     with sr.Microphone() as source:
+        listening = False
         while True:  # Keep the program running
-            if keyboard.is_pressed('ctrl'):
+            if keyboard.is_pressed('q') and not listening:
+                listening = True
                 Listen = pygame.mixer.Sound('Media\listen.wav')
                 Listen.play()
 
-                while True:  # Continuously listen until 'ctrl' is released
-                    if not keyboard.is_pressed('ctrl'):  # Check if 'ctrl' is released
-                        break  # Exit the loop if 'ctrl' is released
+            if listening and not keyboard.is_pressed('q'):
+                listening = False
 
-                    if is_assistant_speaking:
-                        continue  # Skip if the assistant is currently speaking
+            if listening and not is_assistant_speaking:
+                audio = recognizer.listen(source)
+                
+                try:
+                    command = recognizer.recognize_google(audio).lower()
+                    commands_buffer.append(command)  # Store commands in the buffer
+                except sr.UnknownValueError:
+                    print("Sorry, I didn't catch that.")
+                except sr.RequestError as e:
+                    print(f"Could not request results; {e}")
 
-                    audio = recognizer.listen(source)
-                    
-                    try:
-                        command = recognizer.recognize_google(audio).lower()
-                        commands_buffer.append(command)  # Store commands in the buffer
-                    except sr.UnknownValueError:
-                        print("Sorry, I didn't catch that.")
-                    except sr.RequestError as e:
-                        print(f"Could not request results; {e}")
-
-                    await asyncio.sleep(0.1)  # Adjust sleep duration if needed
-
-             # 'ctrl' key released, process accumulated commands concurrently
+            # Process accumulated commands
             if commands_buffer:
                 tasks = []
                 for command in commands_buffer:
                     if any(keyword in command for keyword in COMMAND_URLS):
                         tasks.append(open_website(command))
-                    elif any(phrase in command for phrase in SMART_HOME_ACTIONS):
+                    elif any(keyword in command for keyword in SMART_HOME_ACTIONS):
                         tasks.append(process_smart_home_command(command))
-                    else:
-                        tasks.append(ProcessResponse(command))
-
+                
                 if tasks:
+                    ProcessResponse(command)
                     await asyncio.gather(*tasks)  # Execute tasks concurrently
                     commands_buffer = []
                     print("Commands Processed")
+                    
+            await asyncio.sleep(0.1)  # Adjust sleep duration if needed
+
+
+            # Process accumulated commands
+            if commands_buffer:
+                tasks = []
+                for command in commands_buffer:
+                    if any(keyword in command for keyword in COMMAND_URLS):
+                        tasks.append(open_website(command))
+                    elif any(keyword in command for keyword in SMART_HOME_ACTIONS):
+                        tasks.append(process_smart_home_command(command))
+                
+                if tasks:
+                    ProcessResponse(command)
+                    await asyncio.gather(*tasks)  # Execute tasks concurrently
+                    commands_buffer = []
+                    print("Commands Processed")
+
 
 # Main entry point
 if __name__ == "__main__":

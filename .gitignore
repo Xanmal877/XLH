@@ -156,3 +156,7 @@ cython_debug/
 *Voices/
 *config.py
 TTS/
+*Response,wav
+*Responses.txt
+Response.wav
+Responses.txt
