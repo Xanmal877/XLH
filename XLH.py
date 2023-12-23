@@ -31,6 +31,9 @@ gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=[
 # TTS and speech recognition setup
 recognizer = sr.Recognizer()
 pygame.mixer.init()
+pygame.mixer.get_init()
+
+openai.api_key = OpenAIKey
 
 
 # Flags and logs initialization
@@ -50,7 +53,6 @@ assistant_message_log.append({
 })
 
 # ======================[ UTILITY FUNCTIONS ]=============================== #
-openai.api_key = OpenAIKey
 
 def ProcessResponse(text):
     global is_assistant_speaking
@@ -93,6 +95,7 @@ def ProcessResponse(text):
         torchaudio.save("Response.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
         Response = pygame.mixer.Sound('Response.wav')
         Response.play()
+        del response_text
 
         # Wait for the TTS response to finish playing
         while pygame.mixer.get_busy():
@@ -104,6 +107,8 @@ def ProcessResponse(text):
 
 # ======================[ COMMAND PROCESSING ]============================== #
 
+
+
 # Command processing and speech recognition as ProcessCommands
 async def ProcessCommands():
     global is_assistant_speaking
@@ -113,6 +118,8 @@ async def ProcessCommands():
     with sr.Microphone() as source:
         while True:  # Keep the program running
             if keyboard.is_pressed('ctrl'):
+                Listen = pygame.mixer.Sound('Media\listen.wav')
+                Listen.play()
 
                 while True:  # Continuously listen until 'ctrl' is released
                     if not keyboard.is_pressed('ctrl'):  # Check if 'ctrl' is released
@@ -120,6 +127,7 @@ async def ProcessCommands():
 
                     if is_assistant_speaking:
                         continue  # Skip if the assistant is currently speaking
+
                     audio = recognizer.listen(source)
                     
                     try:
@@ -132,17 +140,21 @@ async def ProcessCommands():
 
                     await asyncio.sleep(0.1)  # Adjust sleep duration if needed
 
-                # 'ctrl' key released, process accumulated commands
-                if commands_buffer:
-                    for command in commands_buffer:
-                        if any(keyword in command for keyword in COMMAND_URLS):
-                            await open_website(command)
-                        elif any(phrase in command for phrase in SMART_HOME_ACTIONS):
-                            await process_smart_home_command(command)
-                        else:
-                            ProcessResponse(command)
+             # 'ctrl' key released, process accumulated commands concurrently
+            if commands_buffer:
+                tasks = []
+                for command in commands_buffer:
+                    if any(keyword in command for keyword in COMMAND_URLS):
+                        tasks.append(open_website(command))
+                    elif any(phrase in command for phrase in SMART_HOME_ACTIONS):
+                        tasks.append(process_smart_home_command(command))
+                    else:
+                        tasks.append(ProcessResponse(command))
+
+                if tasks:
+                    await asyncio.gather(*tasks)  # Execute tasks concurrently
                     commands_buffer = []
-                    print("Command Processed")
+                    print("Commands Processed")
 
 # Main entry point
 if __name__ == "__main__":
