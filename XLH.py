@@ -1,5 +1,6 @@
 # ======================[ IMPORTS AND INITIALIZATIONS ]====================== #
 
+import time
 import os
 import keyboard
 import asyncio
@@ -11,7 +12,6 @@ import speech_recognition as sr
 from config import OpenAIKey
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
-from TTS.api import TTS
 from Tasks.SmartHome import process_smart_home_command, SMART_HOME_ACTIONS
 from Tasks.Websites import open_website, COMMAND_URLS
 
@@ -22,7 +22,7 @@ print("Loading model...")
 config = XttsConfig()
 config.load_json("Voices\\Noelle\\config.json")
 model = Xtts.init_from_config(config)
-model.load_checkpoint(config, checkpoint_dir="Voices\\Noelle", use_deepspeed=False)
+model.load_checkpoint(config, checkpoint_dir="Voices\\Noelle")
 model.cuda()
 
 print("Computing speaker latents...")
@@ -133,21 +133,6 @@ async def ProcessCommands():
                     print("Sorry, I didn't catch that.")
                 except sr.RequestError as e:
                     print(f"Could not request results; {e}")
-
-            # Process accumulated commands
-            if commands_buffer:
-                tasks = []
-                for command in commands_buffer:
-                    if any(keyword in command for keyword in COMMAND_URLS):
-                        tasks.append(open_website(command))
-                    elif any(keyword in command for keyword in SMART_HOME_ACTIONS):
-                        tasks.append(process_smart_home_command(command))
-                
-                if tasks:
-                    ProcessResponse(command)
-                    await asyncio.gather(*tasks)  # Execute tasks concurrently
-                    commands_buffer = []
-                    print("Commands Processed")
                     
             await asyncio.sleep(0.1)  # Adjust sleep duration if needed
 
@@ -160,12 +145,14 @@ async def ProcessCommands():
                         tasks.append(open_website(command))
                     elif any(keyword in command for keyword in SMART_HOME_ACTIONS):
                         tasks.append(process_smart_home_command(command))
-                
+
                 if tasks:
                     ProcessResponse(command)
                     await asyncio.gather(*tasks)  # Execute tasks concurrently
                     commands_buffer = []
                     print("Commands Processed")
+                else:
+                    ProcessResponse(command)
 
 
 # Main entry point
