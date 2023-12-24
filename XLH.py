@@ -26,7 +26,7 @@ model.load_checkpoint(config, checkpoint_dir="Voices\\Noelle", use_deepspeed=Fal
 model.cuda()
 
 print("Computing speaker latents...")
-gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["Voices\\Noelle\\NoelleVocals.wav"])
+gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["Media\\NoelleVocals1.wav"])
 
 # TTS and speech recognition setup
 recognizer = sr.Recognizer()
@@ -111,12 +111,12 @@ async def ProcessCommands():
     global is_assistant_speaking
 
     commands_buffer = []  # To store accumulated commands while 'q' is held down
-    print("I'm here! What can I do for you?")
     with sr.Microphone() as source:
         listening = False
         while True:  # Keep the program running
             if keyboard.is_pressed('q') and not listening:
                 listening = True
+                print("I'm here! What can I do for you?")
                 Listen = pygame.mixer.Sound('Media\listen.wav')
                 Listen.play()
 
