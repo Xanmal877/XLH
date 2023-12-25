@@ -18,30 +18,29 @@ from Tasks.Websites import open_website, COMMAND_URLS
 # ======================[ Loading model and Creating Global Variables ]=================== #
 
 
-print("Loading model...")
+# TTS and speech recognition setup
 config = XttsConfig()
 config.load_json("Voices\\Noelle\\config.json")
 model = Xtts.init_from_config(config)
 model.load_checkpoint(config, checkpoint_dir="Voices\\Noelle")
 model.cuda()
-
-print("Computing speaker latents...")
 gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["Media\\NoelleVocals1.wav"])
-
-# TTS and speech recognition setup
 recognizer = sr.Recognizer()
 pygame.mixer.init()
 pygame.mixer.get_init()
+print("TTS Model Loaded")
 
 openai.api_key = OpenAIKey
+print("AI Text Model Loaded")
+
 
 
 # Flags and logs initialization
 is_assistant_speaking = False
-assistant_message_log = []
+AIMessageLog = []
 
 # Preparing initial system message for assistant log
-assistant_message_log.append({
+AIMessageLog.append({
     "role": "system",
     "content": (
         "Assume the role of Fuuma Tama, a clumsy, airheaded, yet loyal and playful ninja catgirl with purple hair, "
@@ -51,58 +50,6 @@ assistant_message_log.append({
         "relaxed, and play-loving nature in all interactions."
     )
 })
-
-# ======================[ UTILITY FUNCTIONS ]=============================== #
-
-def ProcessResponse(text):
-    global is_assistant_speaking
-    # Append user message to the assistant's log
-    assistant_message_log.append({"role": "user", "content": text})
-    
-    # Check if there's enough messages for a proper conversation
-    if len(assistant_message_log) >= 2:
-        
-        # Make an OpenAI API call
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=assistant_message_log,
-            max_tokens=50,
-            temperature=0.7
-        )
-        
-        # Get the text response from the API call
-        response_text = completion.choices[0].message['content']
-        
-        # Save the response to a text file
-        with open("Responses.txt", "a") as file:
-            file.write(response_text + "\n")
-
-        # Add the response to the log
-        assistant_message_log.append({"role": "assistant", "content": response_text})
-
-        # Set the flag to True to indicate the assistant is speaking
-        is_assistant_speaking = True
-
-        # Speak the response
-        print("Inference...")
-        out = model.inference(
-            response_text,
-            "en",
-            gpt_cond_latent,
-            speaker_embedding,
-            temperature=0.7,
-        )
-        torchaudio.save("Response.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
-        Response = pygame.mixer.Sound('Response.wav')
-        Response.play()
-
-        # Wait for the TTS response to finish playing
-        while pygame.mixer.get_busy():
-            pass
-
-        # Set the flag to False as the assistant has finished speaking
-        is_assistant_speaking = False
-
 
 # ======================[ COMMAND PROCESSING ]============================== #
 
@@ -129,12 +76,13 @@ async def ProcessCommands():
                 try:
                     command = recognizer.recognize_google(audio).lower()
                     commands_buffer.append(command)  # Store commands in the buffer
+                    listening = False  # Stop listening after command recognition
                 except sr.UnknownValueError:
                     print("Sorry, I didn't catch that.")
                 except sr.RequestError as e:
                     print(f"Could not request results; {e}")
                     
-            await asyncio.sleep(0.1)  # Adjust sleep duration if needed
+            await asyncio.sleep(0.5)  # Adjust sleep duration if needed
 
 
             # Process accumulated commands
@@ -147,12 +95,66 @@ async def ProcessCommands():
                         tasks.append(process_smart_home_command(command))
 
                 if tasks:
-                    ProcessResponse(command)
+                    LLMResponse(command)
                     await asyncio.gather(*tasks)  # Execute tasks concurrently
                     commands_buffer = []
                     print("Commands Processed")
                 else:
-                    ProcessResponse(command)
+                    LLMResponse(command)
+                    commands_buffer = []
+                    print("Tama Responsed")
+
+
+# ======================[ LLM RESPONSE SYSTEM ]=============================== #
+
+def LLMResponse(text):
+    global is_assistant_speaking
+    # Append user message to the assistant's log
+    AIMessageLog.append({"role": "user", "content": text})
+    
+    # Check if there's enough messages for a proper conversation
+    if len(AIMessageLog) >= 2:
+        
+        # Make an OpenAI API call
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=AIMessageLog,
+            max_tokens=70,
+            temperature=0.7
+        )
+        
+        # Get the text response from the API call
+        response_text = completion.choices[0].message['content']
+        
+        # Save the response to a text file
+        with open("Responses.txt", "a") as file:
+            file.write(response_text + "\n")
+
+        # Add the response to the log
+        AIMessageLog.append({"role": "assistant", "content": response_text})
+
+        # Set the flag to True to indicate the assistant is speaking
+        is_assistant_speaking = True
+
+        # Speak the response
+        print("Inference...")
+        out = model.inference(
+            response_text,
+            "en",
+            gpt_cond_latent,
+            speaker_embedding,
+            temperature=0.7,
+        )
+        torchaudio.save("Response.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
+        Response = pygame.mixer.Sound('Response.wav')
+        Response.play()
+
+        # Wait for the TTS response to finish playing
+        while pygame.mixer.get_busy():
+            pass
+
+        # Set the flag to False as the assistant has finished speaking
+        is_assistant_speaking = False
 
 
 # Main entry point
