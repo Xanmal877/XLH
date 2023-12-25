@@ -14,6 +14,9 @@ from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 from Tasks.SmartHome import process_smart_home_command, SMART_HOME_ACTIONS
 from Tasks.Websites import open_website, COMMAND_URLS
+from TTS.api import TTS
+
+
 
 # ======================[ Loading model and Creating Global Variables ]=================== #
 
@@ -24,7 +27,11 @@ config.load_json("Voices\\Noelle\\config.json")
 model = Xtts.init_from_config(config)
 model.load_checkpoint(config, checkpoint_dir="Voices\\Noelle")
 model.cuda()
-gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["Media\\NoelleVocals1.wav"])
+tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2", gpu=True)
+gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["Media\\NoelleVocals5.wav"])
+
+
+
 recognizer = sr.Recognizer()
 pygame.mixer.init()
 pygame.mixer.get_init()
@@ -32,7 +39,6 @@ print("TTS Model Loaded")
 
 openai.api_key = OpenAIKey
 print("AI Text Model Loaded")
-
 
 
 # Flags and logs initialization
@@ -51,6 +57,9 @@ AIMessageLog.append({
     )
 })
 
+
+
+
 # ======================[ COMMAND PROCESSING ]============================== #
 
 
@@ -64,8 +73,8 @@ async def ProcessCommands():
             if keyboard.is_pressed('q') and not listening:
                 listening = True
                 print("I'm here! What can I do for you?")
-                Listen = pygame.mixer.Sound('Media\listen.wav')
-                Listen.play()
+             #   Listen = pygame.mixer.Sound('Media\listen.wav')
+            #    Listen.play()
 
             if listening and not keyboard.is_pressed('q'):
                 listening = False
@@ -102,10 +111,12 @@ async def ProcessCommands():
                 else:
                     LLMResponse(command)
                     commands_buffer = []
-                    print("Tama Responsed")
+                    print("Tama Responded")
 
 
 # ======================[ LLM RESPONSE SYSTEM ]=============================== #
+
+
 
 def LLMResponse(text):
     global is_assistant_speaking
@@ -136,8 +147,7 @@ def LLMResponse(text):
         # Set the flag to True to indicate the assistant is speaking
         is_assistant_speaking = True
 
-        # Speak the response
-        print("Inference...")
+
         out = model.inference(
             response_text,
             "en",
@@ -155,6 +165,8 @@ def LLMResponse(text):
 
         # Set the flag to False as the assistant has finished speaking
         is_assistant_speaking = False
+
+
 
 
 # Main entry point
