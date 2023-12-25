@@ -1,4 +1,41 @@
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -o miniconda.exe
-start /wait "" miniconda.exe /S
-del miniconda.exe
-conda create --name XLH --file source_requirements.txt
+@echo off
+
+REM Check if XLH environment exists
+if exist XLH\Scripts\activate (
+    echo "XLH environment already exists."
+    call XLH\Scripts\activate
+
+    REM Install the required packages from piplist.txt
+    if exist piplist.txt (
+        pip install -r piplist.txt
+
+        pause
+    ) else (
+        echo "piplist.txt not found."
+        pause
+    )
+
+    REM Deactivate the virtual environment
+    deactivate
+) else (
+    REM Create and activate the virtual environment if it doesn't exist
+    python -m venv XLH
+    if "%errorlevel%"=="0" (
+        call XLH\Scripts\activate
+
+        REM Install the required packages from piplist.txt
+        if exist piplist.txt (
+            pip install -r piplist.txt
+            pause
+        ) else (
+            echo "piplist.txt not found."
+            pause
+        )
+
+        REM Deactivate the virtual environment
+        deactivate
+    ) else (
+        echo "Failed to create virtual environment."
+        pause
+    )
+)

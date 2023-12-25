@@ -1,0 +1,11 @@
+pygame
+openai==0.28.0
+torch
+torchaudio
+torchvision
+SpeechRecognition
+TTS
+kasa
+python-kasa
+keyboard
+pyaudio

@@ -12,7 +12,6 @@ import speech_recognition as sr
 from config import OpenAIKey
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
-from Tasks.SmartHome import process_smart_home_command, SMART_HOME_ACTIONS
 from Tasks.Websites import open_website, COMMAND_URLS
 from TTS.api import TTS
 
@@ -27,11 +26,9 @@ config.load_json("Voices\\Noelle\\config.json")
 model = Xtts.init_from_config(config)
 model.load_checkpoint(config, checkpoint_dir="Voices\\Noelle")
 model.cuda()
-tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2", gpu=True)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(audio_path=["Media\\NoelleVocals5.wav"])
-
-
-
 recognizer = sr.Recognizer()
 pygame.mixer.init()
 pygame.mixer.get_init()
@@ -49,11 +46,7 @@ AIMessageLog = []
 AIMessageLog.append({
     "role": "system",
     "content": (
-        "Assume the role of Fuuma Tama, a clumsy, airheaded, yet loyal and playful ninja catgirl with purple hair, "
-        "blue eyes, cat ears, and a cat tail. You love cuddles, fluffy food, cosplay, and fighting. Always wear your "
-        "unique outfit of a purple T-shirt, short skirt, and short white socks, complemented by hairpins "
-        "and a scarf. Treat me as if I am your big brother. Maintain a friendly, protective, immature, "
-        "relaxed, and play-loving nature in all interactions."
+        "Assume the role of Fuuma Tama, a clumsy, airheaded, yet loyal and playful ninja catgirl with purple hair, blue eyes, cat ears, and a cat tail. You love cuddles, fluffy food, cosplay, and fighting. Treat me as if I am your big brother. Maintain a friendly, protective, immature, relaxed, and play-loving nature in all interactions."
     )
 })
 
@@ -66,17 +59,17 @@ AIMessageLog.append({
 async def ProcessCommands():
     global is_assistant_speaking
 
-    commands_buffer = []  # To store accumulated commands while 'q' is held down
+    commands_buffer = []  # To store accumulated commands while 'ctrl' is held down
     with sr.Microphone() as source:
         listening = False
         while True:  # Keep the program running
-            if keyboard.is_pressed('q') and not listening:
+            if keyboard.is_pressed('ctrl') and not listening:
                 listening = True
                 print("I'm here! What can I do for you?")
-             #   Listen = pygame.mixer.Sound('Media\listen.wav')
-            #    Listen.play()
+                Listen = pygame.mixer.Sound('Media\listen.wav')
+                Listen.play()
 
-            if listening and not keyboard.is_pressed('q'):
+            if listening and not keyboard.is_pressed('ctrl'):
                 listening = False
 
             if listening and not is_assistant_speaking:
@@ -100,8 +93,7 @@ async def ProcessCommands():
                 for command in commands_buffer:
                     if any(keyword in command for keyword in COMMAND_URLS):
                         tasks.append(open_website(command))
-                    elif any(keyword in command for keyword in SMART_HOME_ACTIONS):
-                        tasks.append(process_smart_home_command(command))
+
 
                 if tasks:
                     LLMResponse(command)
@@ -130,7 +122,7 @@ def LLMResponse(text):
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=AIMessageLog,
-            max_tokens=70,
+            max_tokens=50,
             temperature=0.7
         )
         
