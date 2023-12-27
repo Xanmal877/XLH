@@ -1,5 +1,3 @@
-build/
-develop-eggs/
 *.pyc
 *.wav
 *Voices
