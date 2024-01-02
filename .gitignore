@@ -1,4 +1,7 @@
 *.pyc
 *.wav
-*Voices
-*XLHEnv
+.env
+/XLHenv
+/AIAssistant
+Responses.txt
+/venv

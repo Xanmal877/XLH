@@ -1,11 +1,37 @@
-XLH is an AI virtual Assistant, by default her personailty is Fuyuki Tamaki, Tama for short. You hold down key anywhere and talk to her, when you release the key, she will respond within 30 seconds.
+# AI Conversation Application
 
-You need an OpenAI API Key to run the model, you go here: https://platform.openai.com/api-keys and create one. you make an account, then you click on the left side "api keys". You then click "Create new secret key". Name the the key and click okay, then copy the key and past it where is says "API KEY HERE" in the config file later.
+## Overview
 
-create a config.py folder and write in it as follows 
+This AI-powered application integrates text-to-speech (TTS) and speech recognition to facilitate interactive conversations. It listens for audio commands, processes them with an AI model, and responds using synthesized speech. The application includes features for playing and managing pre-recorded audio files.
 
-OpenAIKey = "API KEY HERE"
+## Features
 
-Once that is done and saved you simply run the install.bat, then the Run.bat.
+- **Speech Recognition**: Converts speech to text using the microphone.
+- **AI Response Generation**: Retrieves and processes AI model responses.
+- **Text-to-Speech (TTS)**: Synthesizes spoken responses from AI text outputs.
+- **Audio Playback**: Manages and plays pre-recorded audio files.
+- **Push-to-Talk**: Records audio only while the space bar is pressed.
 
-CAUTION: OpenAI charges for its use. it is a miniscule (VERY small) amount, but they DO charge, be warned!
+## Requirements
+
+- **Python**: 3.10.6 or later
+- **PyTorch**: 1.12.1 with CUDA support
+- **CUDA**: 11.3 or later
+- **cuDNN**: 9.0 or later
+- **FFmpeg**
+- **Ollama**
+
+## Installation
+
+- Run Update.bat
+- Grab wav file 10-20 seconds long of a Voice
+- name the wav file "Training.wav"
+- put the "Training.wav" file in WavFiles
+- Run Run.bat
+
+
+## Usage
+
+- Push-to-Talk: Press and hold the space bar to start recording. The application will process the audio, generate a response, and play it back.
+- Processing Audio: The recorded audio is converted to text, processed by the AI model, and then synthesized into speech for playback.
+- Audio Playback: Pre-recorded responses are played back and deleted after use.
