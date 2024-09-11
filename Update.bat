@@ -1,11 +1,8 @@
-REM Download llama3.1
-ollama pull llama3.1
-
 REM Create a virtual environment named XLHenv
-python -m venv XLHenv
+python -m venv venv
 
 REM Activate the virtual environment
-call XLHenv\Scripts\activate
+call venv\Scripts\activate
 
 REM Install the required packages from piplist.txt
 pip install wheel

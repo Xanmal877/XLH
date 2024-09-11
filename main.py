@@ -3,7 +3,6 @@ from TTS.api import TTS
 from pydub import AudioSegment
 from pydub.playback import play
 import os
-import requests
 import speech_recognition as sr
 import warnings
 from queue import Queue
@@ -11,25 +10,23 @@ import logging
 import threading
 import time
 import keyboard
+import ollama
 
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning, module='pydub')
 warnings.filterwarnings("ignore", category=FutureWarning, module='TTS')
 
-
 # Set up logging
 logging.basicConfig(level=logging.INFO)
-
 
 # Get device
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
-
 # Init TTS
 tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-OllamaURL = 'http://127.0.0.1:11434/api/chat'
+ollama.pull('llama3.1')
 
 
 class AIConversation:
@@ -83,32 +80,26 @@ class AIConversation:
         except sr.RequestError:
             print("Request error")
 
-    def MessageAI(self, text):
-        try:
-            payload = {
-                "model": "Tamaneko",
-                "messages": [{"role": "user", "content": text}],
-                "stream": False,
-            }
-            response = requests.post(OllamaURL, json=payload)
-            response.raise_for_status()  # Raise an exception for HTTP errors
-            data = response.json()
-            response_text = data.get("message", {}).get("content", "")
-            
-            print(f"AI Response: {response_text}")
-            # Split the response text into segments based on periods
-            segments = response_text.split('.')
-            for segment in segments:
-                trimmed_segment = segment.strip()
-                if trimmed_segment:
-                    self.preload_audio(trimmed_segment + '.')  # Preload each segment
 
-            logging.info("Messages added to queue.")
-            print("Message Added to Queue")
-            return response_text
-        except requests.RequestException as e:
-            logging.error(f"Request failed: {e}")
-            return ""
+    def MessageAI(self, text):
+        response = ollama.chat(
+            model='Tamaneko',
+            messages=[{'role': 'user', 'content': text}],
+            stream=False,
+        )
+
+        AIResponse = response['message']['content']
+        print(f"AI Response: {AIResponse}")
+
+        segments = AIResponse.split('.')
+        for segment in segments:
+            trimmed_segment = segment.strip()
+            if trimmed_segment:
+                self.preload_audio(trimmed_segment + '.')
+
+        return AIResponse
+
+
 
     def preload_audio(self, text):
         try:
@@ -159,6 +150,5 @@ class AIConversation:
 if __name__ == "__main__":
     Talk = AIConversation()
 
-    # Main thread just keeps running, while listening and audio playback are handled in separate threads
     while True:
         time.sleep(1)
