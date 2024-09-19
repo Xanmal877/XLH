@@ -2,36 +2,32 @@
 
 ## Overview
 
-This AI-powered application integrates text-to-speech (TTS) and speech recognition to facilitate interactive conversations. It listens for audio commands, processes them with an AI model, and responds using synthesized speech. The application includes features for playing and managing pre-recorded audio files.
+This application integrates speech recognition and AI response generation for interactive conversations. It listens to audio commands through the microphone, processes these commands with an AI model, and provides responses. The application also includes a system tray icon for managing conversation history and interaction with the application.
 
 ## Features
 
-- **Speech Recognition**: Converts speech to text using the microphone.
-- **AI Response Generation**: Retrieves and processes AI model responses.
-- **Text-to-Speech (TTS)**: Synthesizes spoken responses from AI text outputs.
-- **Audio Playback**: Manages and plays pre-recorded audio files.
-- **Push-to-Talk**: Records audio only while the space bar is pressed.
+- **Speech Recognition**: Converts spoken commands into text.
+- **AI Response Generation**: Uses an AI model to generate responses based on the recognized text.
+- **Conversation History**: Stores and displays a history of interactions.
+- **System Tray Icon**: Provides quick access to conversation history and application exit options.
 
 ## Requirements
 
 - **Python**: 3.10.6 or later
-- **PyTorch**: 1.12.1 with CUDA support
 - **CUDA**: 11.3 or later
 - **cuDNN**: 9.0 or later
-- **FFmpeg**
-- **Ollama**
+- **FFmpeg**: Required for audio processing
+- **Ollama**: For AI response generation
 
 ## Installation
 
-- Run Update.bat
-- Grab wav file 10-20 seconds long of a Voice
-- name the wav file "Training.wav"
-- put the "Training.wav" file in WavFiles
-- Run Run.bat
-
+1. Run `installs.py` to install necessary packages.
+2. Run `update.bat` to perform additional setup tasks.
+3. Place an icon image named `icon.png` in the project directory.
+4. Run `run.bat` to start the application.
 
 ## Usage
 
-- Push-to-Talk: Press and hold the space bar to start recording. The application will process the audio, generate a response, and play it back.
-- Processing Audio: The recorded audio is converted to text, processed by the AI model, and then synthesized into speech for playback.
-- Audio Playback: Pre-recorded responses are played back and deleted after use.
+- **Always Listening**: The application continuously listens for audio commands, processes them, and generates responses.
+- **Conversation History**: Access and review past interactions by clicking the system tray icon and selecting "Show Conversation."
+- **Exit Application**: Click the system tray icon and select "Exit" to close the application.

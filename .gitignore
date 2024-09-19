@@ -1,7 +1,5 @@
 *.pyc
 *.wav
 .env
-/XLHenv
-/AIAssistant
-Responses.txt
 /venv
+*.bat
