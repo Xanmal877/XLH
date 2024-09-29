@@ -27,7 +27,7 @@ class TrayIconHandler:
     def create_tray_icon(self):
         try:
             icon_image = Image.open("icon.png").convert("RGBA")
-            self.tray_icon = pystray.Icon("AI Assistant", icon_image, menu=self.create_menu())
+            self.tray_icon = pystray.Icon(aiName + " Assistant", icon_image, menu=self.create_menu())
         except Exception as e:
             print(f"Error loading image: {e}")
 
